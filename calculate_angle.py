@@ -203,7 +203,7 @@ def main():
         datasetbase=f'./{dataset_base}'
         sparsitylist=range(1, totalsparsity+1)
         # sparsitylist={1,2,3,4,5,6,7,8,9,10,11,12,13,14}
-        # sparsitylist={1}
+        sparsitylist={8,9}
 
         sorted_point_image_relationship,camera_world_positions,point_coordinates=readfromtxt(datasetbase)
 
