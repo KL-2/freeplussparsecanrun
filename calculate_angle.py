@@ -198,13 +198,12 @@ def main():
         # 访问第一个元组中的值
         dataset_base = dataset_info[dataset_index][0]
         images_number = dataset_info[dataset_index][1]
-        totalsparsity = dataset_info[dataset_index][2]
+        totalsparsity = dataset_info[dataset_index][2]#totalsparsity=14
 
         datasetbase=f'./{dataset_base}'
-        # totalsparsity=14
-        # sparsitylist=range(1, totalsparsity+1)
+        sparsitylist=range(1, totalsparsity+1)
         # sparsitylist={1,2,3,4,5,6,7,8,9,10,11,12,13,14}
-        sparsitylist={1}
+        # sparsitylist={1}
 
         sorted_point_image_relationship,camera_world_positions,point_coordinates=readfromtxt(datasetbase)
 
@@ -216,7 +215,7 @@ def main():
             idx_sub_list = idx_sub.astype(int).tolist()
             allowed_cameras = idx_sub_list # 指定允许的相机列表
             # allowed_cameras = [7, 9, 33]  # 指定允许的相机列表
-            print(f"allowed_cameras:{allowed_cameras}")
+            # print(f"allowed_cameras:{allowed_cameras}")
 
             if use_allowed_cameras:
                 angles = find_max_angles(sorted_point_image_relationship, camera_world_positions , point_coordinates,allowed_cameras)
@@ -232,12 +231,12 @@ def main():
 
             # 输出结果
             # for i in range(output_count):
-            for i in range(5):
+            for i in range(1):
                 point_id, image_id1, image_id2, angle = sorted_angles[i]
-                print(f"三维点ID为 {point_id} 的点与图像ID为 {image_id1} 和图像ID为 {image_id2} 的相机之间的夹角为：{np.degrees(angle)} 度")
-                print(f"三维点ID为 {point_id}  ,坐标为 {[f'{coord:.3f}' for coord in point_coordinates[point_id]]}")
-                print(f"图像1 ID为 {image_id1} ,坐标为 {[f'{coord:.3f}' for coord in camera_world_positions[image_id1]]}")
-                print(f"图像2 ID为 {image_id2} ,坐标为 {[f'{coord:.3f}' for coord in camera_world_positions[image_id2]]}")
+                print(f"夹角为：{np.degrees(angle)} 度,三维点ID为 {point_id} 的点与图像ID为 {image_id1} 和图像ID为 {image_id2} 的相机之间")
+                # print(f"三维点ID为 {point_id}  ,坐标为 {[f'{coord:.3f}' for coord in point_coordinates[point_id]]}")
+                # print(f"图像1 ID为 {image_id1} ,坐标为 {[f'{coord:.3f}' for coord in camera_world_positions[image_id1]]}")
+                # print(f"图像2 ID为 {image_id2} ,坐标为 {[f'{coord:.3f}' for coord in camera_world_positions[image_id2]]}")
 
 if __name__ == '__main__':
     main()
