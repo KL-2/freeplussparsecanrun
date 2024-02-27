@@ -185,6 +185,80 @@ def readfromtxt(datasetbase):
     sorted_point_image_relationship = sorted(point_image_relationship.items(), key=lambda x: len(x[1]), reverse=True)
     return sorted_point_image_relationship,camera_world_positions,point_coordinates
 
+def auto_select_threshold(sorted_angles, max_percentile=50, step=1, min_drop_threshold=0.1):
+    """
+    自动选择阈值的功能。
+    它接受一个已排序的夹角列表 sorted_angles,
+    然后在给定的百分位数范围内尝试不同的阈值，
+    选择平均夹角最大的阈值作为最佳阈值。
+
+    尝试不同的百分位数，
+    选择平均夹角最大的阈值作为最佳阈值。
+    如果在搜索过程中出现平均角度的突变，
+    则停止搜索并返回突变之前的平均值。
+
+    Args:
+        sorted_angles: 按照夹角大小排序后的角度列表。
+        max_percentile: 最大的百分位数,取值范围为0到100。
+        step: 每次增加百分位数的步长,默认为5。
+
+    Returns:
+        best_percentile: 最佳阈值对应的百分位数。
+        best_score: 最佳阈值对应的平均夹角。
+    """
+    if not sorted_angles:
+        print("sorted_angles is empty!")
+        return None, None  # 返回空值
+    
+    # best_threshold = None
+    best_score = float('-inf')
+    best_percentile = None
+    lowest_avg_angle = float('inf')  # 最低平均角度的初始值设为正无穷大
+    # min_drop_threshold = 0.1  # 下降突变阈值为上一个百分位平均角度的10%
+    record_pre_num_to_consider = 0
+    for percentile in range(step, max_percentile + 1, step):
+        # print(f"percentile is {percentile}")
+        # threshold_index = int(percentile / 100 * len(sorted_angles))
+        # threshold = sorted_angles[threshold_index]
+        num_to_consider_pre = record_pre_num_to_consider
+        
+        num_to_consider = int(len(sorted_angles) * (float(percentile) / 100)) + 1
+        record_pre_num_to_consider=num_to_consider
+
+        if num_to_consider_pre==num_to_consider:
+            selected_angles = sorted_angles[num_to_consider-1:num_to_consider]
+            avg_angle = sum(selected[3] for selected in selected_angles) / 1
+            # print(f"num_to_consider_pre==num_to_consider@@@@@@@@@@@@")
+            
+            # print(f"selected_angles is {selected_angles}")
+            # print(f"avg_angle is {avg_angle}")
+
+        else:
+            selected_angles = sorted_angles[num_to_consider_pre:num_to_consider]
+            avg_angle = sum(selected[3] for selected in selected_angles) / (num_to_consider-num_to_consider_pre)
+            # print(f"avg_angle is {avg_angle}")
+        
+        if percentile==step:
+            lowest_avg_angle=avg_angle
+            # print(f"lowest_avg_angle is {lowest_avg_angle}")
+        # 计算当前百分位数的平均角度与前1%平均角度的差值
+        diff = lowest_avg_angle - avg_angle
+        
+        if diff > min_drop_threshold * lowest_avg_angle:  # 如果差值大于阈值
+            # print(f"突变了")
+            best_score = sum(selected[3] for selected in sorted_angles[:num_to_consider-step]) / (num_to_consider-step)
+            best_percentile = percentile - step
+            break  # 停止迭代
+        
+        best_score = sum(selected[3] for selected in sorted_angles[:num_to_consider]) / (num_to_consider)
+        best_percentile = percentile
+        
+        # # 更新最低平均角度
+        # if avg_angle < lowest_avg_angle:
+        #     lowest_avg_angle = avg_angle
+
+    return best_percentile, best_score
+
 
 def main():
     use_allowed_cameras=True
@@ -193,6 +267,7 @@ def main():
     # dataset_info = [("flower", 34, 14),("flower", 34, 14)]
     dataset_info = [("flower", 34, 14)]
     dataset_index_list=range(len(dataset_info))
+
     for dataset_index in list(dataset_index_list):   
         print(f"dataset_base is :{dataset_info[dataset_index][0]}")
         # 访问第一个元组中的值
@@ -203,14 +278,15 @@ def main():
         datasetbase=f'./{dataset_base}'
         sparsitylist=range(1, totalsparsity+1)
         # sparsitylist={1,2,3,4,5,6,7,8,9,10,11,12,13,14}
-        sparsitylist={8,9}
+        # sparsitylist={12}
 
-        sorted_point_image_relationship,camera_world_positions,point_coordinates=readfromtxt(datasetbase)
+        sorted_point_image_relationship,camera_world_positions,point_coordinates\
+            =readfromtxt(datasetbase)
 
         for sparsity in list(sparsitylist):
-            print(f"----------------------")
-            print(f"sparsity is {sparsity}")
-            print(f"----------------------")
+            # print(f"----------------------")
+            print(f"sparsity is {sparsity}:", end=" ")
+            # print(f"----------------------")
             idx_sub = np.linspace(0, images_number - 1,  images_number)[::sparsity]
             idx_sub_list = idx_sub.astype(int).tolist()
             allowed_cameras = idx_sub_list # 指定允许的相机列表
@@ -224,19 +300,30 @@ def main():
 
             # 对夹角进行排序，按照第四个元素（即夹角）的降序排列
             sorted_angles = sorted(angles, key=lambda x: x[3], reverse=True)
-
-            # 输出结果
+            
+            # # 输出结果1
+            # # for i in range(output_count):
+            # for i in range(1):
+            #     point_id, image_id1, image_id2, angle = sorted_angles[i]
+            #     print(f"夹角为：{np.degrees(angle)} 度,三维点ID为 {point_id} 的点与图像ID为 {image_id1} 和图像ID为 {image_id2} 的相机之间")
+            #     # print(f"三维点ID为 {point_id}  ,坐标为 {[f'{coord:.3f}' for coord in point_coordinates[point_id]]}")
+            #     # print(f"图像1 ID为 {image_id1} ,坐标为 {[f'{coord:.3f}' for coord in camera_world_positions[image_id1]]}")
+            #     # print(f"图像2 ID为 {image_id2} ,坐标为 {[f'{coord:.3f}' for coord in camera_world_positions[image_id2]]}")
             # 计算要输出的结果数量
-            output_count = int(len(sorted_angles) * 0.1)
 
-            # 输出结果
-            # for i in range(output_count):
-            for i in range(1):
-                point_id, image_id1, image_id2, angle = sorted_angles[i]
-                print(f"夹角为：{np.degrees(angle)} 度,三维点ID为 {point_id} 的点与图像ID为 {image_id1} 和图像ID为 {image_id2} 的相机之间")
-                # print(f"三维点ID为 {point_id}  ,坐标为 {[f'{coord:.3f}' for coord in point_coordinates[point_id]]}")
-                # print(f"图像1 ID为 {image_id1} ,坐标为 {[f'{coord:.3f}' for coord in camera_world_positions[image_id1]]}")
-                # print(f"图像2 ID为 {image_id2} ,坐标为 {[f'{coord:.3f}' for coord in camera_world_positions[image_id2]]}")
+            # # 输出结果2
+            # # 计算前50%夹角的平均值
+            # output_count = int(len(sorted_angles) * 0.5)# 计算前50%的数量
+            # total_angle = sum(angle for _, _, _, angle in sorted_angles[:output_count])#占位符不会进行计算
+            # average_angle = total_angle / output_count
+
+            # print(f"前50%夹角的平均值为：{np.degrees(average_angle)} 度")
+
+            # 输出结果3
+            # 自动确定阈值
+            percentile, avg_angle = auto_select_threshold(sorted_angles, 30, 1)
+            print(f"前{percentile}%夹角的平均值为：{np.degrees(avg_angle)} 度")
+
 
 if __name__ == '__main__':
     main()
