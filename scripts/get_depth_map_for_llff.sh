@@ -1,7 +1,7 @@
 ###################################################################################
 # #dataset_id: fern  flower  fortress  horns  leaves  orchids  room  trex
 # benchmark=LLFF # LLFF
-dataset_id=flower
+# dataset_id=flower
 # root_path=/media/deep/HardDisk4T-new/datasets/nerf_llff_data-20220519T122018Z-001/nerf_llff_data/
 # python get_depth_map.py --root_path $root_path --benchmark $benchmark --dataset_id $dataset_id 
 

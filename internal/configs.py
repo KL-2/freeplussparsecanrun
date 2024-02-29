@@ -77,7 +77,7 @@ class Config:
   render_path_frames: int = 180  # Number of frames in path. Used only by LLFF.#240
   llffhold: int = 8   # Use every Nth image for the test set. Used only by LLFF.
   dtuhold: int = 8  # Use every Nth image for the test set. Used only by DTU.
-  dtu_light_cond: int = 3  # Light condition. Used only by DTU.
+  dtu_light_cond: int = 0  # Light condition. Used only by DTU.
   dtu_max_images: int = 49  # Whether to restrict the max number of images.
   dtu_split_type: str = 'pixelnerf'  # Which train/test split to use.
   use_tiffs: bool = False  # If True, use 32-bit TIFFs. Used only by Blender.
@@ -109,7 +109,7 @@ class Config:
   deterministic_showcase: bool = True  # If True, showcase the same images.
   vis_dist_curve_fn: Callable[Ellipsis, Any] = lambda x: x  # Curve for t_vals.
   vis_num_rays: int = 64  # The number of rays to visualize.
-  dtu_scan: str = 'scan114'  # ID of considered scanID.
+  dtu_scan: str = 'scan118'  # ID of considered scanID.
   llff_scan: str = 'fern'  # Which LLFF scan to use.
   blender_scene: str = 'lego'  # Which blender scene to use.
   dtu_mask_path: str = None  # DTU mask data directory.

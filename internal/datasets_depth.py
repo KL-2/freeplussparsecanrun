@@ -19,14 +19,14 @@ import os
 from os import path
 import queue
 import threading
-
+import glob
 from internal import math, utils  # pylint: disable=g-multiple-import
 import jax
 import numpy as np
 from PIL import Image
 
 import cv2
-
+import argparse
 
 def load_dataset(split, train_dir, config):
   """Loads a split of a dataset using the data_loader specified by `config`."""
@@ -1416,12 +1416,15 @@ class DTU(Dataset):
     # dtu_max_images = 49
     n_images = config.dtu_max_images if (config.dtu_max_images > 0) else (
         len(utils.listdir(self.data_dir)) // 8)
-
+    # dataset_id="scan21"
+    # if dataset_id=="scan21":
+    #   n_images =47
     # depth_path = "./depth_midas_temp/DTU/"
-    depth_path = "/home/user/software/freeplussparse/depth_midas_temp_DPT_Hybrid/LLFF/" 
+    depth_path = "/home/user/software/freeplussparse/depth_midas_temp_DPT_Hybrid/DTU/" 
     
     # Loop over all images.
-    for i in range(1, n_images + 1):
+    # for i in range(1, n_images + 1):
+    for i in range(n_images):
       # Set light condition string accordingly.
       if config.dtu_light_cond < 7: # dtu_light_cond=3, 5000
         light_str = f'{config.dtu_light_cond}_r' + ('5000' if i < 50 else
@@ -1430,9 +1433,29 @@ class DTU(Dataset):
         light_str = 'max'
 
       # Load image.
-      fname = os.path.join(self.data_dir, f'rect_{i:03d}_{light_str}.png')
+      fname = os.path.join(self.data_dir, f'rect_{i+1:03d}_{light_str}.png')
+      # imgdir = path.join(self.data_dir, 'images' + imgdir_suffix)
+      print(f"fname:{fname}")
+      depth_file = os.path.join(depth_path, self.data_dir.split('/')[-1], 'depth_'+f'rect_{i+1:03d}_{light_str}.png')
+
+
+      fnamefiles = glob.glob(fname)
+
+      if not fnamefiles:
+          fname = os.path.join(self.data_dir, 'images/' +f'{i:08d}.jpg')
+          depth_file = os.path.join(depth_path, self.data_dir.split('/')[-1], 'depth_'+f'{i:08d}.png')
+
+          fname_files = glob.glob(fname)
+          if not fname_files:
+              print("No specified images found.")
+          else:
+              print("Specified JPG images found.")
+      else:
+          print("Specified PNG images found.")
+      # fnamepng = os.path.join(self.data_dir, 'images/' +f'{i:08d}.png')
       print('######################################## depth_path and self.data_dir, fname:', depth_path, self.data_dir, fname)
-      depth_file = os.path.join(depth_path, self.data_dir.split('/')[-1], 'depth_'+fname.split('/')[-1])
+      # depth_file = os.path.join(depth_path, self.data_dir.split('/')[-1], 'depth_'+fnamepng.split('/')[-1])
+            
       print('###### depth file:', depth_file)
 
       depth_img = cv2.imread(depth_file, cv2.IMREAD_ANYDEPTH)
@@ -1452,7 +1475,7 @@ class DTU(Dataset):
       # Load projection matrix from file.
       # fname = path.join(self.data_dir, f'../../Calibration/cal18/pos_{i:03d}.txt')
       
-      fname = path.join(config.dtu_pose_path, f'pos_{i:03d}.txt')
+      fname = path.join(config.dtu_pose_path, f'pos_{i+1:03d}.txt')
       with utils.open_file(fname, 'rb') as f:
         projection = np.loadtxt(f, dtype=np.float32)
 

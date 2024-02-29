@@ -1,6 +1,21 @@
 import numpy as np
+# Load image parameters from images.txt
+def load_image_params(file_path):
+    with open(file_path, 'r') as file:
+        lines = file.readlines()
+        image_params = {}
+        for i in range(0, len(lines), 2):  # 从第二行开始处理特征点数据
+            if lines[i].startswith('#'):
+                continue #跳过以 # 开头的注释行
+            line1 = lines[i].strip().split(' ')
+            # line2 = lines[i + 1].strip().split(' ')
+            image_id = int(line1[0])
+            qw, qx, qy, qz = map(float, line1[1:5])
+            tx, ty, tz = map(float, line1[5:8])
+            image_params[image_id] = {qw,qx,qy,qz,tx,ty,tz}
+    return image_params
 
-def read_camera_poses(file_path):
+def load_camera_params(file_path):
     """
     从相机位姿文件中读取相机的世界坐标信息。
     camera_id和world_position对应
@@ -10,20 +25,42 @@ def read_camera_poses(file_path):
     Returns:
         camera_world_positions: 字典,包含每个相机的ID和世界坐标信息
     这段代码假设相机位姿文件的每一行格式如下：
-    相机ID, 模型, 宽度, 高度, PARAMS[], x, y, z
+    相机ID, 模型, 宽度, 高度, PARAMS[]
     """
-    camera_world_positions = {}
+    # camera_world_positions = {}
     with open(file_path, 'r') as f:
         lines = f.readlines()
+        camera_params = {}
         for line in lines:
             if line.startswith('#'):
                 continue#跳过注释
             values = line.strip().split()
             camera_id = int(values[0])
             # 世界坐标信息 (x, y, z)
-            world_position = [float(x) for x in values[5:8]]
-            camera_world_positions[camera_id] = world_position
-    return camera_world_positions
+            # world_position = [float(x) for x in values[5:8]]
+            params = list(map(float, values[4:]))
+            camera_params[camera_id] = params
+            # camera_world_positions[camera_id] = world_position
+    return camera_params
+
+def calculate_camera_centers(camera_params):
+    def calculate_camera_center(image_params):
+        Qw, Qx, Qy, Qz, Tx, Ty, Tz = map(float, image_params)
+        R = np.array([
+            [1 - 2*(Qy**2 + Qz**2), 2*(Qx*Qy - Qz*Qw), 2*(Qx*Qz + Qy*Qw)],
+            [2*(Qx*Qy + Qz*Qw), 1 - 2*(Qx**2 + Qz**2), 2*(Qy*Qz - Qx*Qw)],
+            [2*(Qx*Qz - Qy*Qw), 2*(Qy*Qz + Qx*Qw), 1 - 2*(Qx**2 + Qy**2)]
+        ])
+        T = np.array([Tx, Ty, Tz])
+        R_inv = np.linalg.inv(R)
+        return -np.dot(R_inv, T)
+
+    all_camera_centers = {}
+    for image_id, image_params in camera_params.items():
+        camera_center = calculate_camera_center(image_params)
+        all_camera_centers[image_id] = camera_center
+    
+    return all_camera_centers
 
 def read_image_points(file_path):
     """
@@ -62,6 +99,7 @@ def read_image_points(file_path):
 
                 if int(points_data[j + 2]) == -1:
                     continue  # 跳过没有关联到三维点的特征点
+
                 point3d_id = int(points_data[j + 2])
                 # print(f"points_data[j + 2]:{points_data[j + 2]}")
 
@@ -153,7 +191,7 @@ def find_max_angles(sorted_point_image_relationship, camera_world_positions,poin
                 if allowed_cameras is None or (image_ids[i] in allowed_cameras and image_ids[j] in allowed_cameras):
                     if image_ids[i] != image_ids[j]:  # 检查相机是否相同
                         angle = calculate_angle(camera_positions[i], camera_positions[j], point_position)
-                        
+                        # print(f"angle{angle}")
                         # 查找当前相机对之间的最大夹角
                         max_angle = -float('inf')
                         for a in angles:
@@ -163,19 +201,31 @@ def find_max_angles(sorted_point_image_relationship, camera_world_positions,poin
                         # 如果当前夹角大于最大夹角，则添加到列表中
                         if angle > max_angle:
                             angles.append((point_id, image_ids[i], image_ids[j], angle))
+    # print(f"angles{angles}")
     return angles
 
 def readfromtxt(datasetbase):
     # 从相机位姿文件中读取相机的世界坐标信息
     camera_poses_file = datasetbase+'/cameras.txt'  # 替换为你的相机位姿文件路径
-    camera_world_positions = read_camera_poses(camera_poses_file)
+    images_file_path = datasetbase+'/images.txt'  # 替换为你的 images.txt 文件路径
+
+    #改动
+    camera_params = load_camera_params(camera_poses_file)
+    # Load image parameters from images.txt
+    image_params = load_image_params(images_file_path)
+    # 使用示例
+    camera_world_positions = calculate_camera_centers(image_params)
+    # camera_world_positions = read_camera_poses(camera_poses_file)
+    all_camera_centers = calculate_camera_centers(image_params)
+    # for image_id, camera_center in all_camera_centers.items():
+    #     print("Camera center for image ID {}: {}".format(image_id, camera_center))
+
 
     # 从 images.txt 文件中读取图像的特征点信息
-    images_file_path = datasetbase+'./images.txt'  # 替换为你的 images.txt 文件路径
     image_points = read_image_points(images_file_path)
     # print(f"image_points:{image_points}")
     # 从 points3D.txt 文件中读取三维点的坐标信息
-    points3D_file_path = datasetbase+'./points3D.txt'  # 替换为你的 points3D.txt 文件路径
+    points3D_file_path = datasetbase+'/points3D.txt'  # 替换为你的 points3D.txt 文件路径
     point_coordinates = read_point_coordinates(points3D_file_path)
 
     # 汇总三维点的ID和图像的ID的相互联系
@@ -265,7 +315,7 @@ def main():
 
     #   dataset_base,images_number,totalsparsity
     # dataset_info = [("flower", 34, 14),("flower", 34, 14)]
-    dataset_info = [("flower", 34, 14)]
+    dataset_info = [("dtuscan9", 49, 14)]
     dataset_index_list=range(len(dataset_info))
 
     for dataset_index in list(dataset_index_list):   
@@ -278,7 +328,7 @@ def main():
         datasetbase=f'./{dataset_base}'
         sparsitylist=range(1, totalsparsity+1)
         # sparsitylist={1,2,3,4,5,6,7,8,9,10,11,12,13,14}
-        # sparsitylist={12}
+        sparsitylist={1}
 
         sorted_point_image_relationship,camera_world_positions,point_coordinates\
             =readfromtxt(datasetbase)
@@ -297,19 +347,19 @@ def main():
                 angles = find_max_angles(sorted_point_image_relationship, camera_world_positions , point_coordinates,allowed_cameras)
             else:
                 angles = find_max_angles(sorted_point_image_relationship, camera_world_positions , point_coordinates)
-
+            # print(f"angles:{angles[:5]}")
             # 对夹角进行排序，按照第四个元素（即夹角）的降序排列
             sorted_angles = sorted(angles, key=lambda x: x[3], reverse=True)
             
-            # # 输出结果1
-            # # for i in range(output_count):
-            # for i in range(1):
-            #     point_id, image_id1, image_id2, angle = sorted_angles[i]
-            #     print(f"夹角为：{np.degrees(angle)} 度,三维点ID为 {point_id} 的点与图像ID为 {image_id1} 和图像ID为 {image_id2} 的相机之间")
-            #     # print(f"三维点ID为 {point_id}  ,坐标为 {[f'{coord:.3f}' for coord in point_coordinates[point_id]]}")
-            #     # print(f"图像1 ID为 {image_id1} ,坐标为 {[f'{coord:.3f}' for coord in camera_world_positions[image_id1]]}")
-            #     # print(f"图像2 ID为 {image_id2} ,坐标为 {[f'{coord:.3f}' for coord in camera_world_positions[image_id2]]}")
-            # 计算要输出的结果数量
+            # 输出结果1
+            # for i in range(output_count):
+            for i in range(1):
+                point_id, image_id1, image_id2, angle = sorted_angles[i]
+                # print(f"angle{angle}")
+                print(f"夹角为：{angle} 度,三维点ID为 {point_id} 的点与图像ID为 {image_id1} 和图像ID为 {image_id2} 的相机之间")
+                print(f"三维点ID为 {point_id}  ,坐标为 {[f'{coord:.3f}' for coord in point_coordinates[point_id]]}")
+                print(f"图像1 ID为 {image_id1} ,坐标为 {[f'{coord:.3f}' for coord in camera_world_positions[image_id1]]}")
+                print(f"图像2 ID为 {image_id2} ,坐标为 {[f'{coord:.3f}' for coord in camera_world_positions[image_id2]]}")#计算要输出的结果数量
 
             # # 输出结果2
             # # 计算前50%夹角的平均值
@@ -317,12 +367,12 @@ def main():
             # total_angle = sum(angle for _, _, _, angle in sorted_angles[:output_count])#占位符不会进行计算
             # average_angle = total_angle / output_count
 
-            # print(f"前50%夹角的平均值为：{np.degrees(average_angle)} 度")
+            # print(f"前50%夹角的平均值为：{average_angle} 度")
 
             # 输出结果3
             # 自动确定阈值
             percentile, avg_angle = auto_select_threshold(sorted_angles, 30, 1)
-            print(f"前{percentile}%夹角的平均值为：{np.degrees(avg_angle)} 度")
+            print(f"前{percentile}%夹角的平均值为：{avg_angle} 度")
 
 
 if __name__ == '__main__':

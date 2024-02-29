@@ -1,7 +1,7 @@
 import cv2
 import torch
 import urllib.request
-
+from genericpath import exists
 # import matplotlib.pyplot as plt
 import utils.io
 
@@ -44,19 +44,35 @@ else:
 
 # output_path = root_path
 if args.benchmark=="DTU":
-    #root_path = root_path+args.dataset_id+'/*3_r5000*'
-    root_path = root_path+args.dataset_id+'/images/*jpg'
+    # root_path1 = root_path+args.dataset_id+'/*0_r5000.png'
+    # if not exists(root_path1):
+    #     root_path1 = root_path+args.dataset_id+'/images/*jpg'
+        
+
+    root_path1 = root_path + args.dataset_id + '/*0_r5000.png'
+    files = glob.glob(root_path1)
+
+    if not files:
+        root_path1 = root_path + args.dataset_id + '/images/*.jpg'
+        jpg_files = glob.glob(root_path1)
+        if not jpg_files:
+            print("No specified images found.")
+        else:
+            print("Specified JPG images found.")
+    else:
+        print("Specified PNG images found.")
 else:
     output_path = os.path.join(root_path+args.dataset_id, 'depth_maps')
-    root_path = root_path+args.dataset_id+'/images_8/*png'
+    root_path1 = root_path+args.dataset_id+'/images_8/*png'
     # root_path = root_path+'/*png'
 
 # output_path = os.path.join('depth_midas_temp/', args.benchmark, args.dataset_id)
 output_path = os.path.join('depth_midas_temp_DPT_Hybrid/', args.benchmark, args.dataset_id)
 # output_path = root_path #os.path.join('depth_midas_temp_MiDaS_small/', args.benchmark, args.dataset_id)
 
-image_paths = sorted(glob.glob(root_path))
-print('image_paths:', root_path,image_paths)
+image_paths = sorted(glob.glob(root_path1))
+# print("root_path",root_path1)
+print('image_paths:', root_path1,image_paths)
 box_h = 384*2
 box_w = 384*2
 
