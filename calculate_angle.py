@@ -15,6 +15,7 @@ def load_image_params(file_path):
             image_params[image_id] = {qw,qx,qy,qz,tx,ty,tz}
     return image_params
 
+
 def load_camera_params(file_path):
     """
     从相机位姿文件中读取相机的世界坐标信息。
