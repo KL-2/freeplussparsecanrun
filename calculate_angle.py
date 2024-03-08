@@ -233,7 +233,7 @@ def readfromtxt(datasetbase):
 
     # 获取关联图像数量最多的三维点的ID，并列出对应的相机ID
     sorted_point_image_relationship = sorted(point_image_relationship.items(), key=lambda x: len(x[1]), reverse=True)
-    return sorted_point_image_relationship,camera_world_positions,point_coordinates
+    return point_image_relationship,sorted_point_image_relationship,camera_world_positions,point_coordinates
 
 def auto_select_threshold(sorted_angles, max_percentile=50, step=1, min_drop_threshold=0.1):
     """
@@ -309,13 +309,157 @@ def auto_select_threshold(sorted_angles, max_percentile=50, step=1, min_drop_thr
 
     return best_percentile, best_score
 
+# def calculate_nearest_neighbors_average_angle(camera_world_positions, point_coordinates, point_image_relationship, allowed_cameras=None):
+#     """
+#     计算每个图像ID最近邻的两个相机之间的平均夹角，仅考虑allowed_cameras中指定的相机。
+#     Args:
+#         camera_world_positions: 字典，包含每个图像ID对应的相机中心世界坐标。
+#         point_coordinates: 字典，包含每个三维点的坐标信息。
+#         point_image_relationship: 字典，包含三维点ID和关联的图像ID列表。
+#         allowed_cameras: 列表或None，如果提供，仅考虑列表中的图像ID。
+#     Returns:
+#         nearest_neighbors_average_angle: 字典，每个图像ID对应其最近邻的两个相机之间的平均夹角。
+#     """
+#     nearest_neighbors_average_angle = {}
+#     if allowed_cameras is None:
+#         allowed_cameras = list(camera_world_positions.keys())
+
+#     for image_id in allowed_cameras:
+#         camera_position = camera_world_positions.get(image_id)
+#         if camera_position is None:
+#             print(f"Warning: Camera ID {image_id} not found in camera_world_positions.")
+#             continue
+
+#         distances = {}
+#         for other_id in allowed_cameras:
+#             if other_id == image_id:
+#                 continue  # Skip self
+
+#             other_position = camera_world_positions.get(other_id)
+#             if other_position is not None:
+#                 distance = np.linalg.norm(np.array(camera_position) - np.array(other_position))
+#                 distances[other_id] = distance
+#             else:
+#                 print(f"Warning: Camera ID {other_id} not found in camera_world_positions.")
+
+#         if len(distances) < 2:
+#             print(f"Warning: Not enough neighbors for camera ID {image_id} to calculate angles.")
+#             continue
+
+#         sorted_distances = sorted(distances.items(), key=lambda item: item[1])
+       
+#         # 选择最近的两个相机ID
+#         if len(sorted_distances) >= 2:
+#             nearest_neighbors_ids = [sorted_distances[0][0], sorted_distances[1][0]]
+#         else:
+#             # 如果没有足够的相机，则跳过当前相机
+#             continue
+        
+#         # 计算与最近邻的两个相机观测到的所有三维点形成的夹角，并求平均值
+#         angles = []
+#         for point_id, images in point_image_relationship.items():
+#             if image_id in images:
+#                 for neighbor_id in nearest_neighbors_ids:
+#                     if neighbor_id in images:
+#                         point_pos = np.array(point_coordinates[point_id])
+#                         angle = calculate_angle(np.array(camera_world_positions[image_id]),
+#                                                 np.array(camera_world_positions[neighbor_id]),
+#                                                 point_pos)
+#                         angles.append(angle)
+        
+#         if angles:
+#             average_angle = np.mean(angles)
+#             nearest_neighbors_average_angle[image_id] = average_angle
+    
+#     return nearest_neighbors_average_angle
+def calculate_nearest_neighbors_max_average_angle(camera_world_positions, point_coordinates, point_image_relationship, allowed_cameras=None):
+    """
+    计算每个图像ID最近邻的两个相机之间最大夹角的平均值，仅考虑allowed_cameras中指定的相机。
+    Args:
+        camera_world_positions: 字典，包含每个图像ID对应的相机中心世界坐标。
+        point_coordinates: 字典，包含每个三维点的坐标信息。
+        point_image_relationship: 字典，包含三维点ID和关联的图像ID列表。
+        allowed_cameras: 列表或None，如果提供，仅考虑列表中的图像ID。
+    Returns:
+        nearest_neighbors_max_average_angle: 字典，每个图像ID对应其最近邻的两个相机之间最大夹角的平均值。
+    """
+    nearest_neighbors_max_average_angle = {}
+    if allowed_cameras is None:
+        allowed_cameras = list(camera_world_positions.keys())
+
+    for image_id in allowed_cameras:
+        camera_position = camera_world_positions.get(image_id)
+        if camera_position is None:
+            print(f"Warning: Camera ID {image_id} not found in camera_world_positions.")
+            continue
+
+        distances = {}
+        for other_id in allowed_cameras:
+            if other_id == image_id:
+                continue  # Skip self
+
+            other_position = camera_world_positions.get(other_id)
+            if other_position is not None:
+                distance = np.linalg.norm(np.array(camera_position) - np.array(other_position))
+                distances[other_id] = distance
+            else:
+                print(f"Warning: Camera ID {other_id} not found in camera_world_positions.")
+
+        if len(distances) < 2:
+            print(f"Warning: Not enough neighbors for camera ID {image_id} to calculate angles.")
+            continue
+
+        sorted_distances = sorted(distances.items(), key=lambda item: item[1])
+        
+        # 选择最近的两个相机ID
+        if len(sorted_distances) >= 2:
+            nearest_neighbors_ids = [sorted_distances[0][0], sorted_distances[1][0]]
+        else:
+            continue
+        
+        # 计算与最近邻的两个相机观测到的所有三维点形成的最大夹角
+        max_angles = []
+        for point_id, images in point_image_relationship.items():
+            if image_id in images:
+                angles = [calculate_angle(np.array(camera_world_positions[image_id]),
+                                          np.array(camera_world_positions[neighbor_id]),
+                                          np.array(point_coordinates[point_id]))
+                          for neighbor_id in nearest_neighbors_ids if neighbor_id in images]
+                if angles:
+                    max_angle = max(angles)
+                    max_angles.append(max_angle)
+        
+        if max_angles:
+            max_average_angle = np.mean(max_angles)
+            nearest_neighbors_max_average_angle[image_id] = max_average_angle
+    
+    return nearest_neighbors_max_average_angle
+
+def print_nearest_neighbors_average_angle(nearest_neighbors_average_angle):
+    """
+    打印每个图像ID最近邻的两个相机之间的平均夹角，并打印所有平均夹角的平均值。
+    Args:
+        nearest_neighbors_average_angle: 字典,每个图像ID对应其最近邻的两个相机之间的平均夹角。
+    """
+    total_angle = 0
+    for image_id, angle in nearest_neighbors_average_angle.items():
+        print(f"图像ID {image_id} 与其最近邻的两个相机之间的平均夹角为：{angle:.2f}度")
+        total_angle += angle
+    
+    if nearest_neighbors_average_angle:
+        average_of_averages = total_angle / len(nearest_neighbors_average_angle)
+        print(f"所有平均夹角的平均值为：{average_of_averages:.3f}")
+    else:
+        print("没有可用的平均夹角数据。")
+
 
 def main():
     use_allowed_cameras=True
 
     #   dataset_base,images_number,totalsparsity
     # dataset_info = [("flower", 34, 14),("flower", 34, 14)]
-    dataset_info = [("dtuscan9", 49, 14)]
+    # dataset_info = [("dtuscan9", 49, 14)]
+    dataset_info = [("flower", 34, 14)]
     dataset_index_list=range(len(dataset_info))
 
     for dataset_index in list(dataset_index_list):   
@@ -328,51 +472,66 @@ def main():
         datasetbase=f'./{dataset_base}'
         sparsitylist=range(1, totalsparsity+1)
         # sparsitylist={1,2,3,4,5,6,7,8,9,10,11,12,13,14}
-        sparsitylist={1}
+        # sparsitylist={12}
 
-        sorted_point_image_relationship,camera_world_positions,point_coordinates\
+        point_image_relationship,sorted_point_image_relationship,camera_world_positions,point_coordinates\
             =readfromtxt(datasetbase)
 
         for sparsity in list(sparsitylist):
             # print(f"----------------------")
             print(f"sparsity is {sparsity}:", end=" ")
             # print(f"----------------------")
-            idx_sub = np.linspace(0, images_number - 1,  images_number)[::sparsity]
-            idx_sub_list = idx_sub.astype(int).tolist()
-            allowed_cameras = idx_sub_list # 指定允许的相机列表
+            # idx_sub = np.linspace(1, images_number-1,  images_number)[::sparsity]
+            # idx_sub_list = idx_sub.astype(int).tolist()
+            # allowed_cameras = idx_sub_list # 指定允许的相机列表
+            # 使用 range 生成从1开始的整数序列
+            allowed_cameras = list(range(1, images_number))[::sparsity]
+
             # allowed_cameras = [7, 9, 33]  # 指定允许的相机列表
-            # print(f"allowed_cameras:{allowed_cameras}")
+            print(f"allowed_cameras:{allowed_cameras}")
 
             if use_allowed_cameras:
-                angles = find_max_angles(sorted_point_image_relationship, camera_world_positions , point_coordinates,allowed_cameras)
+                # angles = find_max_angles(sorted_point_image_relationship, camera_world_positions , point_coordinates,allowed_cameras)
+                # 示例使用：
+                # 假设 camera_world_positions, point_coordinates, point_image_relationship 已经由前面的代码计算得到
+                # nearest_neighbors_average_angle = calculate_nearest_neighbors_average_angle(camera_world_positions, point_coordinates, sorted_point_image_relationship,allowed_cameras)
+                nearest_neighbors_average_angle = calculate_nearest_neighbors_max_average_angle(camera_world_positions, point_coordinates, point_image_relationship, allowed_cameras)
+
+                print_nearest_neighbors_average_angle(nearest_neighbors_average_angle)
+
             else:
-                angles = find_max_angles(sorted_point_image_relationship, camera_world_positions , point_coordinates)
+                # angles = find_max_angles(sorted_point_image_relationship, camera_world_positions , point_coordinates)
             # print(f"angles:{angles[:5]}")
             # 对夹角进行排序，按照第四个元素（即夹角）的降序排列
-            sorted_angles = sorted(angles, key=lambda x: x[3], reverse=True)
+                # nearest_neighbors_average_angle = calculate_nearest_neighbors_average_angle(camera_world_positions, point_coordinates, sorted_point_image_relationship)
+                nearest_neighbors_average_angle = calculate_nearest_neighbors_max_average_angle(camera_world_positions, point_coordinates, point_image_relationship, allowed_cameras)
+                print_nearest_neighbors_average_angle(nearest_neighbors_average_angle)
+  
+       
+            # sorted_angles = sorted(angles, key=lambda x: x[3], reverse=True)
             
-            # 输出结果1
-            # for i in range(output_count):
-            for i in range(1):
-                point_id, image_id1, image_id2, angle = sorted_angles[i]
-                # print(f"angle{angle}")
-                print(f"夹角为：{angle} 度,三维点ID为 {point_id} 的点与图像ID为 {image_id1} 和图像ID为 {image_id2} 的相机之间")
-                print(f"三维点ID为 {point_id}  ,坐标为 {[f'{coord:.3f}' for coord in point_coordinates[point_id]]}")
-                print(f"图像1 ID为 {image_id1} ,坐标为 {[f'{coord:.3f}' for coord in camera_world_positions[image_id1]]}")
-                print(f"图像2 ID为 {image_id2} ,坐标为 {[f'{coord:.3f}' for coord in camera_world_positions[image_id2]]}")#计算要输出的结果数量
+            # # 输出结果1
+            # # for i in range(output_count):
+            # for i in range(1):
+            #     point_id, image_id1, image_id2, angle = sorted_angles[i]
+            #     # print(f"angle{angle}")
+            #     print(f"夹角为：{angle} 度,三维点ID为 {point_id} 的点与图像ID为 {image_id1} 和图像ID为 {image_id2} 的相机之间")
+            #     print(f"三维点ID为 {point_id}  ,坐标为 {[f'{coord:.3f}' for coord in point_coordinates[point_id]]}")
+            #     print(f"图像1 ID为 {image_id1} ,坐标为 {[f'{coord:.3f}' for coord in camera_world_positions[image_id1]]}")
+            #     print(f"图像2 ID为 {image_id2} ,坐标为 {[f'{coord:.3f}' for coord in camera_world_positions[image_id2]]}")#计算要输出的结果数量
 
-            # # 输出结果2
-            # # 计算前50%夹角的平均值
-            # output_count = int(len(sorted_angles) * 0.5)# 计算前50%的数量
-            # total_angle = sum(angle for _, _, _, angle in sorted_angles[:output_count])#占位符不会进行计算
-            # average_angle = total_angle / output_count
+            # # # 输出结果2
+            # # # 计算前50%夹角的平均值
+            # # output_count = int(len(sorted_angles) * 0.5)# 计算前50%的数量
+            # # total_angle = sum(angle for _, _, _, angle in sorted_angles[:output_count])#占位符不会进行计算
+            # # average_angle = total_angle / output_count
 
-            # print(f"前50%夹角的平均值为：{average_angle} 度")
+            # # print(f"前50%夹角的平均值为：{average_angle} 度")
 
-            # 输出结果3
-            # 自动确定阈值
-            percentile, avg_angle = auto_select_threshold(sorted_angles, 30, 1)
-            print(f"前{percentile}%夹角的平均值为：{avg_angle} 度")
+            # # 输出结果3
+            # # 自动确定阈值
+            # percentile, avg_angle = auto_select_threshold(sorted_angles, 30, 1)
+            # print(f"前{percentile}%夹角的平均值为：{avg_angle} 度")
 
 
 if __name__ == '__main__':
