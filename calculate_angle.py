@@ -443,7 +443,7 @@ def print_nearest_neighbors_average_angle(nearest_neighbors_average_angle):
     """
     total_angle = 0
     for image_id, angle in nearest_neighbors_average_angle.items():
-        print(f"图像ID {image_id} 与其最近邻的两个相机之间的平均夹角为：{angle:.2f}度")
+        print(f"图像ID {image_id} 与其最近邻的两个相机之间的平均夹角为：{angle:.2f}度, file=f")
         total_angle += angle
     
     if nearest_neighbors_average_angle:
@@ -454,84 +454,85 @@ def print_nearest_neighbors_average_angle(nearest_neighbors_average_angle):
 
 
 def main():
-    use_allowed_cameras=True
-
-    #   dataset_base,images_number,totalsparsity
-    # dataset_info = [("flower", 34, 14),("flower", 34, 14)]
-    # dataset_info = [("dtuscan9", 49, 14)]
-    dataset_info = [("flower", 34, 14)]
-    dataset_index_list=range(len(dataset_info))
-
-    for dataset_index in list(dataset_index_list):   
-        print(f"dataset_base is :{dataset_info[dataset_index][0]}")
-        # 访问第一个元组中的值
-        dataset_base = dataset_info[dataset_index][0]
-        images_number = dataset_info[dataset_index][1]
-        totalsparsity = dataset_info[dataset_index][2]#totalsparsity=14
-
-        datasetbase=f'./{dataset_base}'
-        sparsitylist=range(1, totalsparsity+1)
-        # sparsitylist={1,2,3,4,5,6,7,8,9,10,11,12,13,14}
-        # sparsitylist={12}
-
-        point_image_relationship,sorted_point_image_relationship,camera_world_positions,point_coordinates\
-            =readfromtxt(datasetbase)
-
-        for sparsity in list(sparsitylist):
-            # print(f"----------------------")
-            print(f"sparsity is {sparsity}:", end=" ")
-            # print(f"----------------------")
-            # idx_sub = np.linspace(1, images_number-1,  images_number)[::sparsity]
-            # idx_sub_list = idx_sub.astype(int).tolist()
-            # allowed_cameras = idx_sub_list # 指定允许的相机列表
-            # 使用 range 生成从1开始的整数序列
-            allowed_cameras = list(range(1, images_number))[::sparsity]
-
-            # allowed_cameras = [7, 9, 33]  # 指定允许的相机列表
-            print(f"allowed_cameras:{allowed_cameras}")
-
-            if use_allowed_cameras:
-                # angles = find_max_angles(sorted_point_image_relationship, camera_world_positions , point_coordinates,allowed_cameras)
-                # 示例使用：
-                # 假设 camera_world_positions, point_coordinates, point_image_relationship 已经由前面的代码计算得到
-                # nearest_neighbors_average_angle = calculate_nearest_neighbors_average_angle(camera_world_positions, point_coordinates, sorted_point_image_relationship,allowed_cameras)
-                nearest_neighbors_average_angle = calculate_nearest_neighbors_max_average_angle(camera_world_positions, point_coordinates, point_image_relationship, allowed_cameras)
-
-                print_nearest_neighbors_average_angle(nearest_neighbors_average_angle)
-
-            else:
-                # angles = find_max_angles(sorted_point_image_relationship, camera_world_positions , point_coordinates)
-            # print(f"angles:{angles[:5]}")
-            # 对夹角进行排序，按照第四个元素（即夹角）的降序排列
-                # nearest_neighbors_average_angle = calculate_nearest_neighbors_average_angle(camera_world_positions, point_coordinates, sorted_point_image_relationship)
-                nearest_neighbors_average_angle = calculate_nearest_neighbors_max_average_angle(camera_world_positions, point_coordinates, point_image_relationship, allowed_cameras)
-                print_nearest_neighbors_average_angle(nearest_neighbors_average_angle)
-  
-       
-            # sorted_angles = sorted(angles, key=lambda x: x[3], reverse=True)
-            
-            # # 输出结果1
-            # # for i in range(output_count):
-            # for i in range(1):
-            #     point_id, image_id1, image_id2, angle = sorted_angles[i]
-            #     # print(f"angle{angle}")
-            #     print(f"夹角为：{angle} 度,三维点ID为 {point_id} 的点与图像ID为 {image_id1} 和图像ID为 {image_id2} 的相机之间")
-            #     print(f"三维点ID为 {point_id}  ,坐标为 {[f'{coord:.3f}' for coord in point_coordinates[point_id]]}")
-            #     print(f"图像1 ID为 {image_id1} ,坐标为 {[f'{coord:.3f}' for coord in camera_world_positions[image_id1]]}")
-            #     print(f"图像2 ID为 {image_id2} ,坐标为 {[f'{coord:.3f}' for coord in camera_world_positions[image_id2]]}")#计算要输出的结果数量
-
-            # # # 输出结果2
-            # # # 计算前50%夹角的平均值
-            # # output_count = int(len(sorted_angles) * 0.5)# 计算前50%的数量
-            # # total_angle = sum(angle for _, _, _, angle in sorted_angles[:output_count])#占位符不会进行计算
-            # # average_angle = total_angle / output_count
-
-            # # print(f"前50%夹角的平均值为：{average_angle} 度")
-
-            # # 输出结果3
-            # # 自动确定阈值
-            # percentile, avg_angle = auto_select_threshold(sorted_angles, 30, 1)
-            # print(f"前{percentile}%夹角的平均值为：{avg_angle} 度")
+    with open('./output.txt', 'a') as f:
+        use_allowed_cameras=True
+    
+        #   dataset_base,images_number,totalsparsity
+        # dataset_info = [("flower", 34, 14),("flower", 34, 14)]
+        # dataset_info = [("dtuscan9", 49, 14)]
+        dataset_info = [("flower", 34, 14)]
+        dataset_index_list=range(len(dataset_info))
+    
+        for dataset_index in list(dataset_index_list):   
+            print(f"dataset_base is :{dataset_info[dataset_index][0]}", file=f)
+            # 访问第一个元组中的值
+            dataset_base = dataset_info[dataset_index][0]
+            images_number = dataset_info[dataset_index][1]
+            totalsparsity = dataset_info[dataset_index][2]#totalsparsity=14
+    
+            datasetbase=f'./{dataset_base}'
+            sparsitylist=range(1, totalsparsity+1)
+            # sparsitylist={1,2,3,4,5,6,7,8,9,10,11,12,13,14}
+            # sparsitylist={12}
+    
+            point_image_relationship,sorted_point_image_relationship,camera_world_positions,point_coordinates\
+                =readfromtxt(datasetbase)
+    
+            for sparsity in list(sparsitylist):
+                # print(f"----------------------")
+                print(f"sparsity is {sparsity}:", end=" ", file=f)
+                # print(f"----------------------")
+                # idx_sub = np.linspace(1, images_number-1,  images_number)[::sparsity]
+                # idx_sub_list = idx_sub.astype(int).tolist()
+                # allowed_cameras = idx_sub_list # 指定允许的相机列表
+                # 使用 range 生成从1开始的整数序列
+                allowed_cameras = list(range(1, images_number))[::sparsity]
+    
+                # allowed_cameras = [7, 9, 33]  # 指定允许的相机列表
+                print(f"allowed_cameras:{allowed_cameras}", file=f)
+    
+                if use_allowed_cameras:
+                    # angles = find_max_angles(sorted_point_image_relationship, camera_world_positions , point_coordinates,allowed_cameras)
+                    # 示例使用：
+                    # 假设 camera_world_positions, point_coordinates, point_image_relationship 已经由前面的代码计算得到
+                    # nearest_neighbors_average_angle = calculate_nearest_neighbors_average_angle(camera_world_positions, point_coordinates, sorted_point_image_relationship,allowed_cameras)
+                    nearest_neighbors_average_angle = calculate_nearest_neighbors_max_average_angle(camera_world_positions, point_coordinates, point_image_relationship, allowed_cameras)
+    
+                    print_nearest_neighbors_average_angle(nearest_neighbors_average_angle)
+    
+                else:
+                    # angles = find_max_angles(sorted_point_image_relationship, camera_world_positions , point_coordinates)
+                # print(f"angles:{angles[:5]}")
+                # 对夹角进行排序，按照第四个元素（即夹角）的降序排列
+                    # nearest_neighbors_average_angle = calculate_nearest_neighbors_average_angle(camera_world_positions, point_coordinates, sorted_point_image_relationship)
+                    nearest_neighbors_average_angle = calculate_nearest_neighbors_max_average_angle(camera_world_positions, point_coordinates, point_image_relationship, allowed_cameras)
+                    print_nearest_neighbors_average_angle(nearest_neighbors_average_angle)
+      
+           
+                # sorted_angles = sorted(angles, key=lambda x: x[3], reverse=True)
+                
+                # # 输出结果1
+                # # for i in range(output_count):
+                # for i in range(1):
+                #     point_id, image_id1, image_id2, angle = sorted_angles[i]
+                #     # print(f"angle{angle}")
+                #     print(f"夹角为：{angle} 度,三维点ID为 {point_id} 的点与图像ID为 {image_id1} 和图像ID为 {image_id2} 的相机之间")
+                #     print(f"三维点ID为 {point_id}  ,坐标为 {[f'{coord:.3f}' for coord in point_coordinates[point_id]]}")
+                #     print(f"图像1 ID为 {image_id1} ,坐标为 {[f'{coord:.3f}' for coord in camera_world_positions[image_id1]]}")
+                #     print(f"图像2 ID为 {image_id2} ,坐标为 {[f'{coord:.3f}' for coord in camera_world_positions[image_id2]]}")#计算要输出的结果数量
+    
+                # # # 输出结果2
+                # # # 计算前50%夹角的平均值
+                # # output_count = int(len(sorted_angles) * 0.5)# 计算前50%的数量
+                # # total_angle = sum(angle for _, _, _, angle in sorted_angles[:output_count])#占位符不会进行计算
+                # # average_angle = total_angle / output_count
+    
+                # # print(f"前50%夹角的平均值为：{average_angle} 度")
+    
+                # # 输出结果3
+                # # 自动确定阈值
+                # percentile, avg_angle = auto_select_threshold(sorted_angles, 30, 1)
+                # print(f"前{percentile}%夹角的平均值为：{avg_angle} 度")
 
 
 if __name__ == '__main__':
