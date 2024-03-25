@@ -55,11 +55,11 @@ def extract_fields(bound_min, bound_max, near, far, resolution, model, render_ch
     print(resolution)
     
     # 创建均匀分布的网格点
-    X = torch.linspace(bound_min[0], bound_max[0], resolution).split(N)
+    X = torch.linspace(bound_min[0], bound_max[0], resolution).split(N)#每个维度生成resolution个点，然后每N个一组
     Y = torch.linspace(bound_min[1], bound_max[1], resolution).split(N)
     Z = torch.linspace(bound_min[2], bound_max[2], resolution).split(N)
     
-    u = np.zeros([resolution, resolution, resolution], dtype=np.float32)  # 存储密度值
+    u = np.zeros([resolution, resolution, resolution], dtype=np.float32)  # 存储密度值大小为resolution * resolution * resolution
     host_id = jax.host_id()
     for xi, xs in enumerate(X):
         for yi, ys in enumerate(Y):
@@ -107,46 +107,19 @@ def extract_fields(bound_min, bound_max, near, far, resolution, model, render_ch
                         start, stop = host_id * rays_per_host, (host_id + 1) * rays_per_host
                         chunk_rays = jax.tree_map(lambda r: utils.shard(r[start:stop]), chunk_rays)
 
-                        # serializable_chunk_rays = convert_to_serializable(chunk_rays)
-                        # json_data = json.dumps(serializable_chunk_rays, indent=2)
-                        # # 指定要写入的文件路径
-                        # file_path = 'chunk_rays_output_extract_mesh.json'
-                        # # 打开文件并写入 JSON 数据
-                        # with open(file_path, 'w') as file:
-                        #     file.write(json_data)
-                        # # 通知用户文件已保存
-                        # print(f"Data saved to {file_path}")
-                        # raw = model(None, chunk_rays)
-                        # # raws.append(np.mean(raw, axis=1))
-                        # # raws.append(torch.mean(raw, dim=1).cpu())
-                        # print("Keys in the first dictionary:", raw[0].keys())
-                        # print("Keys in the second dictionary:", raw[1].keys())
-                        # input()
-                        # # raw = model(None, chunk_rays)[-1][-1].squeeze()
-                        # # 打印第二个字典的键
-                        # # print("Keys in the second dictionary:", ray_histories[1].keys())
-
-                        # # 假设 chunk_output 是一个密度数组
-                        # # raw = chunk_output.squeeze()  # 根据实际输出结构调整
-                        # raws.append(raw)
                         raw = model(None, chunk_rays)  # 模型返回两个字典组成的列表
-                        # 假设我们只关心密度信息
-                        # densities = jax.tree_map(lambda d: d['density'], raw)  # 提取每个字典中的密度信息
                         densities = [d['density'] for d in raw]  # 直接提取每个字典中的密度信息
                         density_mean = np.mean(densities, axis=0)  # 计算平均密度
-                        # 因为有两个字典，我们需要从每个字典中提取密度并进行合适的处理
-                        # 这里简单地取平均值作为示例
-                        # density_mean = np.mean([densities[0], densities[1]], axis=0)
-                        # print(density_mean)
                         raws.append(density_mean)
+
                 # 合并块结果并重塑为网格形状
                 sigma = np.concatenate(raws, axis=0)
                 sigma = np.maximum(sigma, 0)  # 确保密度值非负
-                print(len(raws))
-                print(sigma.shape)
+                # print(len(raws))
+                # print(sigma.shape)
                 val = sigma.reshape((len(xs), len(ys), len(zs)))
                 u[xi * N:xi * N + len(xs), yi * N:yi * N + len(ys), zi * N:zi * N + len(zs)] = val
-    
+
     return sigma
 
 # def extract_fields(bound_min, bound_max, near, far, resolution, model, config):
