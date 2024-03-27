@@ -15,14 +15,16 @@
 
 """Utility functions."""
 import os
-
+import collections
 import flax
 import jax
 import jax.numpy as jnp
 import numpy as np
 from PIL import Image
 from PIL import ExifTags
-
+import dataclasses
+import flax
+import jax
 
 @flax.struct.dataclass
 class TrainState:
@@ -40,6 +42,9 @@ class Rays:
   near: float
   far: float
 
+# Rays_ = collections.namedtuple(
+#     'Rays',
+#     ('origins', 'directions', 'viewdirs', 'radii', 'lossmult', 'near', 'far'))
 
 def open_file(pth, mode='r'):
   return open(pth, mode=mode)
@@ -61,6 +66,19 @@ def makedirs(pth):
   ## --- modified for better compatibility ----
   os.makedirs(pth, exist_ok=True)
   ## ------------------------------------------
+
+# def namedtuple_map(fn, tup):
+#   """Apply `fn` to each element of `tup` and cast to `tup`'s namedtuple."""
+#   return type(tup)(*map(fn, tup))
+#add 0318
+def namedtuple_map(fn, tup):
+    """Apply `fn` to each element of `tup` and reconstruct the dataclass or namedtuple."""
+    if dataclasses.is_dataclass(tup):
+        # 对于dataclass，对每个字段应用fn
+        return type(tup)(**{f.name: fn(getattr(tup, f.name)) for f in dataclasses.fields(tup)})
+    else:
+        # 假设是namedtuple或其他可迭代对象
+        return type(tup)(*map(fn, tup))
 
 
 def shard(xs):

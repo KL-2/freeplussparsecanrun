@@ -1,4 +1,0 @@
-
-sh scripts/get_depth_map_for_llff.sh
-
-bash scripts/train_and_eval_llff.sh

@@ -139,6 +139,37 @@ class MipNerfModel(nn.Module):
     return renderings, ray_history
     ## -------------------------------------------------------------- ##
 
+import json
+import numpy as np
+# def convert_to_serializable(obj):
+#     if isinstance(obj, np.ndarray):
+#         return obj.tolist()  # 将 numpy 数组转换为列表
+#     elif hasattr(obj, '__dict__'):
+#         # 对象可能是一个自定义类实例
+#         return {k: convert_to_serializable(v) for k, v in obj.__dict__.items()}
+#     else:
+#         return obj
+
+def convert_to_serializable(obj):
+    """递归转换对象为可序列化的格式。"""
+    if hasattr(obj, '__dict__'):
+        # 对象是一个自定义类实例，转换其属性为字典
+        return {k: convert_to_serializable(v) for k, v in obj.__dict__.items()}
+    elif isinstance(obj, (list, tuple)):
+        # 对象是列表或元组，递归处理其中的每个元素
+        return [convert_to_serializable(v) for v in obj]
+    elif isinstance(obj, dict):
+        # 对象是字典，递归处理其中的每个值
+        return {k: convert_to_serializable(v) for k, v in obj.items()}
+    elif isinstance(obj, jnp.DeviceArray):
+        # 对象是JAX DeviceArray，将其转换为列表
+        return obj.tolist()
+    elif isinstance(obj, np.ndarray):
+        # 对象是NumPy数组，将其转换为列表
+        return obj.tolist()
+    else:
+        # 对于基本类型，直接返回
+        return obj
 
 def construct_mipnerf(rng, rays, config):
   """Construct a Neural Radiance Field.
@@ -243,11 +274,26 @@ class MLP(nn.Module):
       ## ---- add freq reg mask ----- ##
       if coord_freq_mask is not None:
         inputs = inputs * coord_freq_mask
+      # if inputs.ndim > 2 and inputs.shape[0] == 1:
+      #   inputs = jnp.squeeze(inputs, axis=0)  # 现在 inputs 的形状为 (N, D)
       ## ---------------------------- ##
       # Evaluate network to output density
       x = inputs
       for i in range(self.net_depth):
+        # print("sdkfjsdofjasdofjoisdfjsdoijfoisdjfoisd")
+        # print(self.net_depth)
+        # print(self.net_width)
+        # print("sdkfjsdofjasdofjoisdfjsdoijfoisdjfoisd")
+        # print(x.shape)
+        # print(x)
+        # print(i)#i=0
+#         8
+# 256
+# (99,)
+
+        # m=input()
         x = dense_layer(self.net_width)(x)
+        
         x = self.net_activation(x)
         if i % self.skip_layer == 0 and i > 0:
           x = jnp.concatenate([x, inputs], axis=-1)
@@ -341,10 +387,14 @@ def render_image(render_fn, rays, rng, config):
     disp: jnp.ndarray, rendered disparity image.
     acc: jnp.ndarray, rendered accumulated weights per pixel.
   """
+  # print(rays.origins.shape)#(300, 400, 3)
   height, width = rays.origins.shape[:2]
+  # print(height, width)#300, 400
+  # input()
   num_rays = height * width
   rays = jax.tree_map(lambda r: r.reshape((num_rays, -1)), rays)
-
+  # print(rays.origins.shape)#(120000, 3)
+  # input()
   host_id = jax.host_id()
   chunks = []
   idx0s = range(0, num_rays, config.render_chunk_size)
@@ -354,18 +404,32 @@ def render_image(render_fn, rays, rng, config):
       print(f'Rendering chunk {i_chunk}/{len(idx0s)-1}')
     chunk_rays = (
         jax.tree_map(lambda r: r[idx0:idx0 + config.render_chunk_size], rays))
+    # print(chunk_rays.origins.shape)#(1024, 3)
     actual_chunk_size = chunk_rays.origins.shape[0]
     rays_remaining = actual_chunk_size % jax.device_count()
     if rays_remaining != 0:
       padding = jax.device_count() - rays_remaining
       chunk_rays = jax.tree_map(
           lambda r: jnp.pad(r, ((0, padding), (0, 0)), mode='edge'), chunk_rays)
+      # print(chunk_rays.origins.shape)#(1024, 3)
     else:
       padding = 0
     # After padding the number of chunk_rays is always divisible by host_count.
     rays_per_host = chunk_rays.origins.shape[0] // jax.host_count()
     start, stop = host_id * rays_per_host, (host_id + 1) * rays_per_host
     chunk_rays = jax.tree_map(lambda r: utils.shard(r[start:stop]), chunk_rays)
+
+    serializable_chunk_rays = convert_to_serializable(chunk_rays)
+    json_data = json.dumps(serializable_chunk_rays, indent=2)
+
+    # 指定要写入的文件路径
+    file_path = 'chunk_rays_output_render_image.json'
+
+    # 打开文件并写入 JSON 数据
+    with open(file_path, 'w') as file:
+      file.write(json_data)
+
+
     chunk_renderings = render_fn(rng, chunk_rays)    ########
 
     # Unshard the renderings

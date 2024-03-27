@@ -179,6 +179,8 @@ def define_common_flags():
   flags.DEFINE_string('n_input_views', "1" , 'Gin config files.')
   flags.DEFINE_string('postfix', "_debug", 'Gin config files.')
   flags.DEFINE_string('dataset_id', "scan38", 'Gin config files.')
+  flags.DEFINE_string('train_dir', None, 'where to store ckpts and logs')
+  # flags.DEFINE_integer('seed',0,'random seed')#0318
 
   #变量名，默认值，说明-可以通过运行脚本更改
 

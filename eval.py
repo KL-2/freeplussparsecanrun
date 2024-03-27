@@ -22,7 +22,7 @@ from absl import app
 import flax
 from flax.metrics import tensorboard
 from flax.training import checkpoints
-from internal import configs, datasets, math, models, utils, vis  # pylint: disable=g-multiple-import
+from internal import configs, datasets_depth, math, models, utils, vis  # pylint: disable=g-multiple-import
 import jax
 from jax import random
 import numpy as np
@@ -60,7 +60,7 @@ def main(unused_argv):
     wandb.run.save()
     wandb.config.update(config)
   if config.dataset_loader == 'dtu' or config.dataset_loader=='llff':  
-    dataset = datasets.load_dataset('test', config.data_dir, config)
+    dataset = datasets_depth.load_dataset('test', config.data_dir, config)
   # elif config.dataset_loader == 'zed2':
   #   dataset = datasets_depth_zed.load_dataset('test', config.data_dir, config)
   # elif config.dataset_loader == 'kinect':
@@ -117,7 +117,7 @@ def main(unused_argv):
     elif config.dataset_loader == 'llff':
       print('########################## llff')
       #state = checkpoints.restore_checkpoint(config.checkpoint_dir, state, step=90000)
-      state = checkpoints.restore_checkpoint(config.checkpoint_dir, state, step=90000)
+      state = checkpoints.restore_checkpoint(config.checkpoint_dir, state, step=69768)
     else:
       print('########################## others')
       state = checkpoints.restore_checkpoint(config.checkpoint_dir, state, step=60000)
@@ -188,6 +188,10 @@ def main(unused_argv):
     print(f'Evaluating image {idx+1}/{dataset.size}')
     eval_start_time = time.time()
     batch = next(dataset)
+    print(batch['rays'].origins.shape)#(300, 400, 3)
+
+    print(dataset.size)#25
+    # input()
     rendering = models.render_image(
         functools.partial(render_eval_pfn, state.optimizer.target),
         batch['rays'],
@@ -280,7 +284,7 @@ def main(unused_argv):
       (jax.host_id() == 0)):
     print('############## onfig.dataset_loader #######:', config.dataset_loader)
     for name in list(metrics[0].keys()):
-      with utils.open_file(path_fn(f'metric_{name}_{step}.txt'), 'w') as f:
+      with utils.open_file(path_fn(f'c{name}_{step}.txt'), 'w') as f:
         f.write(' '.join([str(m[name]) for m in metrics]))
       print(f'{name}:', np.mean([m[name] for m in metrics]))
     print('evaluated exp:', config.expname)

@@ -355,6 +355,8 @@ def main(unused_argv):
       in_axes=(0, 0, 0, None, None, None))
       # in_axes=(0, 0, 0, None, None, None, None))
 
+#这里train_step用到了ray_historyl@
+
   # Because this is only used for test set rendering, we disable randomization
   # and use the "final" padding for resampling.
   def render_eval_fn(variables, _, rays):

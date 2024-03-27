@@ -30,7 +30,7 @@ Config.grad_max_val = 0.1
 
 # num_views dependent config
 Config.n_input_views = 3# try to be reset
-Config.max_steps = 43945
+Config.max_steps = 90000
 Config.project = "dtu3"
 
 

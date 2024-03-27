@@ -1,0 +1,1 @@
+CUDA_VISIBLE_DEVICES=0  python extract_grid_mipnerf.py --gin_configs configs/dtu3_freenerf_plus.gin --checkpoint_dir "dtu3_"  --dataset_id "scan118" --n_input_views "1" --postfix "sparsity1"

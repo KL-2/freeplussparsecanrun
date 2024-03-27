@@ -209,6 +209,14 @@ def compute_alpha_weights(density, t_vals, dirs):
   ],axis=-1))
   weights = alpha * trans
 
+    # weights（权重）：这是每个采样点基于其密度和沿光线的距离计算出的权重。这个权重反映了每个采样点对最终观察到的颜色的贡献程度。权重较高的采样点对最终颜色的贡献也较大。
+
+    # alpha（透明度）：这是每个采样点的透明度值，由1 - exp(-density_delta)计算得出。这个值用来表示光线通过采样点时的吸收程度，与材料的不透明度相关。
+
+    # trans（透射率）：透射率表示光线在到达当前采样点之前已经经过的介质所衰减的程度。它是通过累积之前所有采样点的density_delta值来计算的，用于模拟光线通过介质时的衰减效果。
+
+    # delta（段距离）：这是光线上相邻采样点之间的实际距离。它是基于光线方向和采样点间的参数距离（t_dists）计算出的，反映了空间中实际的距离变化。
+
   return weights, alpha, trans, delta
 
 # # def lossfun_distortion(t, w):
